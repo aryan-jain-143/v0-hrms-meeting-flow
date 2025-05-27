@@ -10,9 +10,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowLeft, Check, CalendarDays, Clock } from "lucide-react"
 import Link from "next/link"
 import { useToast } from "@/hooks/use-toast"
+import { useRouter } from "next/navigation"
+import { useMeetings } from "@/hooks/use-meetings"
 
 export default function ScheduleMeetingPage() {
   const { toast } = useToast()
+  const router = useRouter()
+  const { createMeeting } = useMeetings()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formData, setFormData] = useState({
     title: "",
@@ -44,16 +48,42 @@ export default function ScheduleMeetingPage() {
     e.preventDefault()
     setIsSubmitting(true)
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1500))
+    try {
+      // Create the meeting using our hook
+      const result = await createMeeting({
+        title: formData.title,
+        clientName: formData.clientName,
+        organizationName: formData.organizationName,
+        mobileNumber: formData.mobileNumber,
+        date: formData.date,
+        time: formData.time,
+        location: formData.location,
+        description: formData.description,
+        isInstant: false,
+        reminderMinutes: formData.reminder ? Number.parseInt(formData.reminderTime) : null,
+      })
 
-    toast({
-      title: "Meeting scheduled",
-      description: "Your meeting has been scheduled successfully",
-    })
+      if (result) {
+        toast({
+          title: "Meeting scheduled",
+          description: "Your meeting has been scheduled successfully",
+        })
 
-    setIsSubmitting(false)
-    // In a real app, we would redirect to the meeting list
+        // Redirect to the home page after successful submission
+        router.push("/")
+      } else {
+        throw new Error("Failed to schedule meeting")
+      }
+    } catch (error) {
+      console.error("Error scheduling meeting:", error)
+      toast({
+        title: "Error",
+        description: "Failed to schedule meeting. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (

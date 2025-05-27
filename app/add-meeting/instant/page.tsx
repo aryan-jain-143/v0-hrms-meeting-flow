@@ -9,9 +9,13 @@ import { Textarea } from "@/components/ui/textarea"
 import { Camera, MapPin, ArrowLeft, Check } from "lucide-react"
 import Link from "next/link"
 import { useToast } from "@/hooks/use-toast"
+import { useRouter } from "next/navigation"
+import { useMeetings } from "@/hooks/use-meetings"
 
 export default function InstantMeetingPage() {
   const { toast } = useToast()
+  const router = useRouter()
+  const { createMeeting } = useMeetings()
   const [location, setLocation] = useState({ latitude: null, longitude: null, address: "Fetching location..." })
   const [selfieImage, setSelfieImage] = useState(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -52,16 +56,43 @@ export default function InstantMeetingPage() {
     e.preventDefault()
     setIsSubmitting(true)
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1500))
+    try {
+      // Create the meeting using our hook
+      const result = await createMeeting({
+        title: `Instant Meeting with ${formData.clientName}`,
+        clientName: formData.clientName,
+        organizationName: formData.organizationName,
+        mobileNumber: formData.mobileNumber,
+        description: formData.meetingSummary,
+        isInstant: true,
+        meetingDate: new Date().toISOString(),
+        location: location.address,
+        latitude: location.latitude,
+        longitude: location.longitude,
+        selfieUrl: selfieImage,
+      })
 
-    toast({
-      title: "Meeting saved",
-      description: "Instant meeting has been recorded successfully",
-    })
+      if (result) {
+        toast({
+          title: "Meeting saved",
+          description: "Instant meeting has been recorded successfully",
+        })
 
-    setIsSubmitting(false)
-    // In a real app, we would redirect to the meeting list
+        // Redirect to the home page after successful submission
+        router.push("/")
+      } else {
+        throw new Error("Failed to create meeting")
+      }
+    } catch (error) {
+      console.error("Error creating meeting:", error)
+      toast({
+        title: "Error",
+        description: "Failed to save meeting. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
